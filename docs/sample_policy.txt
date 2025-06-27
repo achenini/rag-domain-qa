@@ -1,0 +1,5 @@
+sample_policy.txt
+-----------------
+Our company offers 15 days of paid vacation.
+Sick leave can be taken up to 10 days per year.
+Remote work is allowed 3 days per week.

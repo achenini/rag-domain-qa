@@ -1,10 +1,14 @@
-from langchain.embeddings import OpenAIEmbeddings
+from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.docstore.document import Document
 from langchain.chains.question_answering import load_qa_chain
 from langchain.chat_models import ChatOpenAI
+from sentence_transformers import SentenceTransformer
+from langchain.llms import HuggingFacePipeline
+from transformers import pipeline
 import os
+
 
 def load_documents(folder_path):
     documents = []
@@ -14,14 +18,23 @@ def load_documents(folder_path):
     return documents
 
 def create_vectorstore(documents):
+    # Class that splits each document into smaller chunks with an overlap
     splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+    # perform split
     texts = splitter.split_documents(documents)
-    embeddings = OpenAIEmbeddings()
+    # use pre-trained embedding model that turns each text chunk into a vector representation
+    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    # store vectors using a similarity search/clustering algorithm combo for vectors
     vectorstore = FAISS.from_documents(texts, embeddings)
     return vectorstore
 
 def answer_query(query, vectorstore):
+    # convert vectorstore to a retriever object with query as the input parameter
     retriever = vectorstore.as_retriever()
+    # returns top matching document chunks
     docs = retriever.get_relevant_documents(query)
-    chain = load_qa_chain(ChatOpenAI(temperature=0), chain_type="stuff")
+    # loads q&a chain via Hugging Face Models
+    qa_pipeline = pipeline("text2text-generation", model="google/flan-t5-base")  # Or any model you have
+    llm = HuggingFacePipeline(pipeline=qa_pipeline)
+    chain = load_qa_chain(llm, chain_type="stuff")
     return chain.run(input_documents=docs, question=query)
